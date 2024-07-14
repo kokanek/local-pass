@@ -22,6 +22,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f1d047df-7336-40a3-b046-cfa13faa56cb"
+      }
+    },
+    "owner": "kokanek",
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }
