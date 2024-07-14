@@ -1,47 +1,66 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import Modal from 'react-native-modal';
-import * as SecureStore from 'expo-secure-store';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+} from "react-native";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import Modal from "react-native-modal";
+import * as SecureStore from "expo-secure-store";
+import uuid from "react-native-uuid";
 
-const icons = ['account-balance', 'mail', 'event', 'access-time', 'local-grocery-store', 'restaurant'];
-const colors = ['#DB4437', '#1DA1F2', '#00C805', '#FFCA28'];
+const icons = [
+  "lock",
+  "cloud",
+  "account-balance",
+  "mail",
+  "event",
+  "credit-card",
+  "local-grocery-store",
+  "restaurant",
+];
+const colors = ["#232323", "#4CC27E", "#6654C3", "#46B4CD", "#D0314F"];
 
 const HomePage = () => {
-
   const [isModalVisible, setModalVisible] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [passwordHint, setPasswordHint] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState('lock');
-  const [selectedColor, setSelectedColor] = useState('#4CAF50');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [passwordHint, setPasswordHint] = useState("");
+  const [selectedIcon, setSelectedIcon] = useState("lock");
+  const [selectedColor, setSelectedColor] = useState("#232323");
   const [isIconPickerVisible, setIconPickerVisible] = useState(false);
   const [secureData, setSecureData] = useState([]);
   const [filteredList, setFilteredList] = useState([]);
+  const [visibleIds, setVisibleIds] = useState([]);
 
   useEffect(() => {
     const newFilteredList = [...secureData];
     setFilteredList(newFilteredList);
-  }, [secureData])
+  }, [secureData]);
 
   useEffect(() => {
     const retrieveData = async () => {
       try {
-        let jsonValue = await SecureStore.getItemAsync('secure_data');
+        let jsonValue = await SecureStore.getItemAsync("secure_data");
         jsonValue = jsonValue != undefined || null ? JSON.parse(jsonValue) : [];
-        console.log('storing jsonvalue: ', jsonValue);
+        console.log("storing jsonvalue: ", jsonValue);
         setSecureData(jsonValue);
       } catch (error) {
-        console.error('Error retrieving data:', error);
+        console.error("Error retrieving data:", error);
       }
     };
 
     retrieveData();
-  }, [])
+  }, []);
 
   const storeData = async () => {
-    console.log('reached here')
-    console.log('secure data in function: ', secureData);
+    console.log("reached here");
+    console.log("secure data in function: ", secureData);
+    const id = await uuid.v4();
 
     try {
       const data = {
@@ -50,41 +69,72 @@ const HomePage = () => {
         passwordHint: passwordHint,
         icon: selectedIcon,
         color: selectedColor,
+        id: id,
       };
 
-      console.log('secureData: ', secureData);
+      console.log("secureData: ", secureData);
       const tempData = [...secureData, data];
-      console.log('secureData: ', tempData);
+      console.log("secureData: ", tempData);
       const jsonValue = JSON.stringify(tempData);
-      console.log('stroring value: ', jsonValue);
-      await SecureStore.setItemAsync('secure_data', jsonValue);
+      console.log("stroring value: ", jsonValue);
+      await SecureStore.setItemAsync("secure_data", jsonValue);
       setSecureData(tempData);
     } catch (error) {
-      console.error('Error storing data:', error);
+      console.error("Error storing data:", error);
     }
   };
 
   const onTextFiltered = (str) => {
-    if (str.trim() == '') {
-      setFilteredList(secureData)
+    if (str.trim() == "") {
+      setFilteredList(secureData);
       return;
     }
-    const newFilteredList = filteredList.filter(item => item.title.toLowerCase().includes(str.toLowerCase()) || item.description.toLowerCase().includes(str.toLowercase))
-    setFilteredList(newFilteredList)
-  }
+    const newFilteredList = filteredList.filter(
+      (item) =>
+        item.title.toLowerCase().includes(str.toLowerCase()) ||
+        item.description.toLowerCase().includes(str.toLowercase),
+    );
+    setFilteredList(newFilteredList);
+  };
 
-  console.log('secure data in render: ', secureData);
+  const onClickPreview = (item) => {
+    console.log("reached function", item.id);
+    const newVisibleIds = [...visibleIds];
+    if (visibleIds.includes(item.id)) {
+      const index = visibleIds.indexOf(item.id);
+      newVisibleIds.splice(index, 1);
+    } else {
+      newVisibleIds.push(item.id);
+    }
+
+    console.log("visible: ", newVisibleIds);
+    setVisibleIds(newVisibleIds);
+  };
+
+  console.log("secure data in render: ", secureData);
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Hello, User</Text>
-          <Text style={styles.headerSubtitle}>Save your password easily and securely</Text>
-          <Icon name="bar-chart" size={24} color="#000" style={styles.chartIcon} />
+          <Text style={styles.headerSubtitle}>
+            Save your password easily and securely
+          </Text>
+          <Icon
+            name="settings"
+            size={32}
+            color="#000"
+            style={styles.chartIcon}
+          />
         </View>
 
         <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#888" style={styles.searchIcon} />
+          <Icon
+            name="search"
+            size={20}
+            color="#888"
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search"
@@ -96,29 +146,56 @@ const HomePage = () => {
         <View style={styles.savedPasswordsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Saved password</Text>
-            <Text style={styles.sectionSubtitle}>Latest save ▼</Text>
           </View>
           {filteredList.map((item) => (
-            <View style={styles.passwordItem} key={item.title + item.description}>
-              <Icon name={item.icon} size={24} color={item.color} style={styles.appIcon} />
-              <View style={styles.passwordDetails}>
-                <Text style={styles.passwordTitle}>{item.title}</Text>
-                <Text style={styles.passwordEmail}>{item.description}</Text>
+            <View
+              key={item.title + item.description}
+              style={styles.passwordItem}
+            >
+              <View style={styles.passwordRow}>
+                <Icon
+                  name={item.icon}
+                  size={32}
+                  color={item.color}
+                  style={styles.appIcon}
+                />
+                <View style={styles.passwordDetails}>
+                  <Text style={styles.passwordTitle}>{item.title}</Text>
+                  <Text style={styles.passwordEmail}>{item.description}</Text>
+                </View>
+                <TouchableOpacity onPress={() => onClickPreview(item)}>
+                  <Icon
+                    name={
+                      visibleIds.includes(item.id)
+                        ? "keyboard-arrow-down"
+                        : "keyboard-arrow-up"
+                    }
+                    size={32}
+                    color="#000"
+                  />
+                </TouchableOpacity>
               </View>
-              <Icon name="arrow-forward" size={20} color="#000" style={styles.arrowIcon} />
+              {visibleIds.includes(item.id) && (
+                <View style={styles.passwordDisplay}>
+                  <Text style={styles.passwordHint}>{item.passwordHint}</Text>
+                </View>
+              )}
             </View>
           ))}
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.floatingButton} onPress={() => setModalVisible(true)}>
-        <Icon name="add" size={24} color="#fff" />
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => setModalVisible(true)}
+      >
+        <Icon name="add" size={32} color="#fff" />
       </TouchableOpacity>
 
       <Modal
         isVisible={isModalVisible}
         onSwipeComplete={() => setModalVisible(false)}
-        swipeDirection={['down']}
+        swipeDirection={["down"]}
         style={styles.modal}
       >
         <View style={styles.modalContent}>
@@ -155,10 +232,13 @@ const HomePage = () => {
               />
             </View>
           </View>
-          <TouchableOpacity style={styles.saveButton} onPress={() => {
-            storeData();
-            setModalVisible(false);
-          }}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => {
+              storeData();
+              setModalVisible(false);
+            }}
+          >
             <Text style={styles.saveButtonText}>Save</Text>
           </TouchableOpacity>
         </View>
@@ -203,7 +283,7 @@ const HomePage = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   header: {
     padding: 20,
@@ -211,92 +291,58 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   chartIcon: {
-    position: 'absolute',
-    top: 20,
+    position: "absolute",
+    top: 32,
     right: 20,
-  },
-  newPasswordCard: {
-    backgroundColor: '#4CAF50',
-    padding: 20,
-    margin: 20,
-    borderRadius: 10,
-  },
-  newPasswordTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 10,
-  },
-  newPasswordSubtitle: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  addNewButton: {
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 20,
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  addNewButtonText: {
-    color: '#4CAF50',
-    fontWeight: 'bold',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 20,
-  },
-  statCard: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    width: '48%',
-  },
-  statIcon: {
-    backgroundColor: '#9C27B0',
-    padding: 5,
-    borderRadius: 5,
-  },
-  statTitle: {
-    fontSize: 14,
-    marginTop: 5,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 5,
   },
   savedPasswordsSection: {
     padding: 20,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   passwordItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "column",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  passwordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     padding: 15,
     borderRadius: 10,
-    marginBottom: 10,
+  },
+  //const colors = ["#4CC27E", "#6654C3", "#46B4CD", "#D0314F"];
+  passwordDisplay: {
+    backgroundColor: "#232323",
+    padding: 12,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+    alignItems: "center",
+    width: "100%",
+  },
+  passwordHint: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
   },
   appIcon: {
     marginRight: 15,
@@ -306,116 +352,101 @@ const styles = StyleSheet.create({
   },
   passwordTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   passwordEmail: {
     fontSize: 14,
-    color: '#666',
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-  },
-  navItem: {
-    alignItems: 'center',
-  },
-  navText: {
-    fontSize: 12,
-    marginTop: 5,
+    color: "#666",
   },
   floatingButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 80,
-    backgroundColor: '#4CAF50',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: "absolute",
+    right: 32,
+    bottom: 32,
+    backgroundColor: "#232323",
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 5,
   },
   modal: {
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
     margin: 0,
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     padding: 22,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     minHeight: 300,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
   modalHeaderText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   formContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 20,
   },
   iconPicker: {
     width: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   inputContainer: {
     flex: 1,
   },
   input: {
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: "#ccc",
     marginBottom: 15,
     paddingVertical: 5,
   },
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#232323",
     padding: 15,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   iconPickerModal: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     padding: 22,
     borderRadius: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   iconPickerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
   },
   iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     marginBottom: 20,
   },
   iconItem: {
     width: 80,
     height: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     margin: 10,
   },
   colorPicker: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
   },
   colorItem: {
     width: 40,
@@ -424,9 +455,9 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fdfdfd',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fdfdfd",
     borderRadius: 25,
     paddingHorizontal: 15,
     marginHorizontal: 10,
