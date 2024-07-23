@@ -9,6 +9,7 @@ import {
   TextInput,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import Octicon from "react-native-vector-icons/Octicons";
 import Modal from "react-native-modal";
 import * as SecureStore from "expo-secure-store";
 import uuid from "react-native-uuid";
@@ -26,6 +27,9 @@ const icons = [
 const colors = ["#232323", "#4CC27E", "#6654C3", "#46B4CD", "#D0314F"];
 
 const HomePage = () => {
+  const titleInputRef = React.useRef(null);
+  const descriptionInputRef = React.useRef(null);
+  const passwordHintInputRef = React.useRef(null);
   const [isModalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -46,8 +50,8 @@ const HomePage = () => {
     const retrieveData = async () => {
       try {
         let jsonValue = await SecureStore.getItemAsync("secure_data");
-        jsonValue = jsonValue != undefined || null ? JSON.parse(jsonValue) : [];
-        console.log("storing jsonvalue: ", jsonValue);
+        jsonValue =
+          jsonValue !== undefined || null ? JSON.parse(jsonValue) : [];
         setSecureData(jsonValue);
       } catch (error) {
         console.error("Error retrieving data:", error);
@@ -58,8 +62,6 @@ const HomePage = () => {
   }, []);
 
   const storeData = async () => {
-    console.log("reached here");
-    console.log("secure data in function: ", secureData);
     const id = await uuid.v4();
 
     try {
@@ -72,13 +74,17 @@ const HomePage = () => {
         id: id,
       };
 
-      console.log("secureData: ", secureData);
       const tempData = [...secureData, data];
-      console.log("secureData: ", tempData);
       const jsonValue = JSON.stringify(tempData);
-      console.log("stroring value: ", jsonValue);
       await SecureStore.setItemAsync("secure_data", jsonValue);
       setSecureData(tempData);
+
+      // clear the fields
+      setTitle("");
+      setDescription("");
+      setPasswordHint("");
+      setSelectedIcon("lock");
+      setSelectedColor("#232323");
     } catch (error) {
       console.error("Error storing data:", error);
     }
@@ -98,7 +104,6 @@ const HomePage = () => {
   };
 
   const onClickPreview = (item) => {
-    console.log("reached function", item.id);
     const newVisibleIds = [...visibleIds];
     if (visibleIds.includes(item.id)) {
       const index = visibleIds.indexOf(item.id);
@@ -107,25 +112,25 @@ const HomePage = () => {
       newVisibleIds.push(item.id);
     }
 
-    console.log("visible: ", newVisibleIds);
     setVisibleIds(newVisibleIds);
   };
 
-  console.log("secure data in render: ", secureData);
+  useEffect(() => {
+    if (isModalVisible && titleInputRef.current) {
+      setTimeout(() => {
+        titleInputRef.current.focus();
+      }, 100);
+    }
+  }, [isModalVisible]);
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <View>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Hello, User</Text>
+          <Text style={styles.headerTitle}>Local Pass</Text>
           <Text style={styles.headerSubtitle}>
-            Save your password easily and securely
+            Save your password hints locally
           </Text>
-          <Icon
-            name="settings"
-            size={32}
-            color="#000"
-            style={styles.chartIcon}
-          />
         </View>
 
         <View style={styles.searchContainer}>
@@ -142,46 +147,66 @@ const HomePage = () => {
             onChangeText={(str) => onTextFiltered(str)}
           />
         </View>
-
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Saved hints 👇🏾</Text>
+        </View>
+      </View>
+      <ScrollView style={styles.scrollView}>
         <View style={styles.savedPasswordsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Saved password</Text>
-          </View>
-          {filteredList.map((item) => (
-            <View
-              key={item.title + item.description}
-              style={styles.passwordItem}
-            >
-              <View style={styles.passwordRow}>
-                <Icon
-                  name={item.icon}
-                  size={32}
-                  color={item.color}
-                  style={styles.appIcon}
-                />
-                <View style={styles.passwordDetails}>
-                  <Text style={styles.passwordTitle}>{item.title}</Text>
-                  <Text style={styles.passwordEmail}>{item.description}</Text>
-                </View>
-                <TouchableOpacity onPress={() => onClickPreview(item)}>
+          {filteredList.map((item) => {
+            const dynamicStyles = StyleSheet.create({
+              passwordDisplay: {
+                backgroundColor: item.color,
+                padding: 12,
+                borderBottomLeftRadius: 10,
+                borderBottomRightRadius: 10,
+                alignItems: "center",
+                width: "100%",
+              },
+            });
+
+            return (
+              <View
+                key={item.title + item.description}
+                style={styles.passwordItem}
+              >
+                <View style={styles.passwordRow}>
                   <Icon
-                    name={
-                      visibleIds.includes(item.id)
-                        ? "keyboard-arrow-down"
-                        : "keyboard-arrow-up"
-                    }
+                    name={item.icon}
                     size={32}
-                    color="#000"
+                    color={item.color}
+                    style={styles.appIcon}
                   />
-                </TouchableOpacity>
-              </View>
-              {visibleIds.includes(item.id) && (
-                <View style={styles.passwordDisplay}>
-                  <Text style={styles.passwordHint}>{item.passwordHint}</Text>
+                  <View style={styles.passwordDetails}>
+                    <Text style={styles.passwordTitle}>{item.title}</Text>
+                    <Text style={styles.passwordEmail}>{item.description}</Text>
+                  </View>
+                  {visibleIds.includes(item.id) && (
+                    <View>
+                      <TouchableOpacity onPress={() => onClickPreview(item)}>
+                        <Icon name="delete" size={24} color="#000" />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => onClickPreview(item)}>
+                        <Icon name="edit" size={24} color="#000" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  <TouchableOpacity onPress={() => onClickPreview(item)}>
+                    <Octicon
+                      name={visibleIds.includes(item.id) ? "eye" : "eye-closed"}
+                      size={32}
+                      color="#000"
+                    />
+                  </TouchableOpacity>
                 </View>
-              )}
-            </View>
-          ))}
+                {visibleIds.includes(item.id) && (
+                  <View style={dynamicStyles.passwordDisplay}>
+                    <Text style={styles.passwordHint}>{item.passwordHint}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -208,27 +233,44 @@ const HomePage = () => {
           <View style={styles.formContainer}>
             <View style={styles.iconPicker}>
               <TouchableOpacity onPress={() => setIconPickerVisible(true)}>
-                <Icon name={selectedIcon} size={48} color={selectedColor} />
+                <View style={styles.iconWrapper}>
+                  <Icon name={selectedIcon} size={48} color={selectedColor} />
+                  <View style={styles.editIconWrapper}>
+                    <Icon name="edit" size={16} color="#fff" />
+                  </View>
+                </View>
               </TouchableOpacity>
             </View>
             <View style={styles.inputContainer}>
               <TextInput
+                ref={titleInputRef}
                 style={styles.input}
                 placeholder="Title"
                 value={title}
                 onChangeText={setTitle}
+                returnKeyType="next"
+                onSubmitEditing={() => descriptionInputRef.current.focus()}
               />
               <TextInput
+                ref={descriptionInputRef}
                 style={styles.input}
                 placeholder="Description"
                 value={description}
                 onChangeText={setDescription}
+                returnKeyType="next"
+                onSubmitEditing={() => passwordHintInputRef.current.focus()}
               />
               <TextInput
+                ref={passwordHintInputRef}
                 style={styles.input}
                 placeholder="Password Hint"
                 value={passwordHint}
                 onChangeText={setPasswordHint}
+                returnKeyType="done"
+                onSubmitEditing={() => {
+                  storeData();
+                  setModalVisible(false);
+                }}
               />
             </View>
           </View>
@@ -306,9 +348,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
+    marginHorizontal: 24,
+    marginTop: 18,
+    marginBottom: 2,
   },
   sectionTitle: {
     fontSize: 18,
@@ -332,7 +374,6 @@ const styles = StyleSheet.create({
   },
   //const colors = ["#4CC27E", "#6654C3", "#46B4CD", "#D0314F"];
   passwordDisplay: {
-    backgroundColor: "#232323",
     padding: 12,
     borderBottomLeftRadius: 10,
     borderBottomRightRadius: 10,
@@ -460,7 +501,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fdfdfd",
     borderRadius: 25,
     paddingHorizontal: 15,
-    marginHorizontal: 10,
+    marginHorizontal: 20,
   },
   searchIcon: {
     marginRight: 10,
@@ -469,6 +510,22 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     fontSize: 16,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  iconWrapper: {
+    position: "relative",
+    width: 48,
+    height: 48,
+  },
+  editIconWrapper: {
+    position: "absolute",
+    right: -5,
+    bottom: 25,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 10,
+    padding: 2,
   },
 });
 
