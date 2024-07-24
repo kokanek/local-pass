@@ -5,7 +5,7 @@ import {
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  ScrollView,
+  Alert,
   TextInput,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -13,6 +13,7 @@ import Octicon from "react-native-vector-icons/Octicons";
 import Modal from "react-native-modal";
 import * as SecureStore from "expo-secure-store";
 import uuid from "react-native-uuid";
+import { SwipeListView } from "react-native-swipe-list-view";
 
 const icons = [
   "lock",
@@ -25,6 +26,11 @@ const icons = [
   "restaurant",
 ];
 const colors = ["#232323", "#4CC27E", "#6654C3", "#46B4CD", "#D0314F"];
+
+const Mode = {
+  EDIT: "edit",
+  ADD: "add",
+};
 
 const HomePage = () => {
   const titleInputRef = React.useRef(null);
@@ -40,6 +46,8 @@ const HomePage = () => {
   const [secureData, setSecureData] = useState([]);
   const [filteredList, setFilteredList] = useState([]);
   const [visibleIds, setVisibleIds] = useState([]);
+  const [mode, setMode] = useState(Mode.ADD);
+  const [idBeingEdited, setIdBeingEdited] = useState(null);
 
   useEffect(() => {
     const newFilteredList = [...secureData];
@@ -61,8 +69,13 @@ const HomePage = () => {
     retrieveData();
   }, []);
 
-  const storeData = async () => {
-    const id = await uuid.v4();
+  const onClickAddEditItem = async () => {
+    let id;
+    if (mode === Mode.EDIT) {
+      id = idBeingEdited;
+    } else {
+      id = await uuid.v4();
+    }
 
     try {
       const data = {
@@ -74,20 +87,37 @@ const HomePage = () => {
         id: id,
       };
 
-      const tempData = [...secureData, data];
-      const jsonValue = JSON.stringify(tempData);
-      await SecureStore.setItemAsync("secure_data", jsonValue);
-      setSecureData(tempData);
+      if (mode === Mode.EDIT) {
+        const updatedData = secureData.map((item) => {
+          if (item.id === id) {
+            return data;
+          }
+          return item;
+        });
+
+        const jsonValue = JSON.stringify(updatedData);
+        await SecureStore.setItemAsync("secure_data", jsonValue);
+        setSecureData(updatedData);
+      } else {
+        const tempData = [...secureData, data];
+        const jsonValue = JSON.stringify(tempData);
+        await SecureStore.setItemAsync("secure_data", jsonValue);
+        setSecureData(tempData);
+      }
 
       // clear the fields
-      setTitle("");
-      setDescription("");
-      setPasswordHint("");
-      setSelectedIcon("lock");
-      setSelectedColor("#232323");
+      clearFields();
     } catch (error) {
       console.error("Error storing data:", error);
     }
+  };
+
+  const clearFields = () => {
+    setTitle("");
+    setDescription("");
+    setPasswordHint("");
+    setSelectedIcon("lock");
+    setSelectedColor("#232323");
   };
 
   const onTextFiltered = (str) => {
@@ -114,6 +144,100 @@ const HomePage = () => {
 
     setVisibleIds(newVisibleIds);
   };
+
+  const deleteItem = (item) => {
+    // Implement delete functionality
+    Alert.alert(
+      "Confirm Deletion",
+      "Are you sure you want to delete this item?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Yes",
+          onPress: async () => {
+            try {
+              const updatedData = secureData.filter(
+                (dataItem) => dataItem.id !== item.id,
+              );
+              const jsonValue = JSON.stringify(updatedData);
+              await SecureStore.setItemAsync("secure_data", jsonValue);
+              setSecureData(updatedData);
+              setFilteredList(updatedData);
+            } catch (error) {
+              console.error("Error deleting data:", error);
+            }
+          },
+        },
+      ],
+    );
+    console.log("Delete item:", item);
+  };
+
+  const editItem = (item) => {
+    // Implement edit functionality
+    setTitle(item.title);
+    setDescription(item.description);
+    setPasswordHint(item.passwordHint);
+    setSelectedIcon(item.icon);
+    setSelectedColor(item.color);
+    setIdBeingEdited(item.id);
+    setModalVisible(true);
+  };
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      activeOpacity={1}
+      onPress={() => onClickPreview(item)}
+      style={styles.passwordItem}
+      key={item.id} // Add this line
+    >
+      <View style={styles.passwordRow}>
+        <Icon
+          name={item.icon}
+          size={32}
+          color={item.color}
+          style={styles.appIcon}
+        />
+        <View style={styles.passwordDetails}>
+          <Text style={styles.passwordTitle}>{item.title}</Text>
+          <Text style={styles.passwordEmail}>{item.description}</Text>
+        </View>
+        <Octicon
+          name={visibleIds.includes(item.id) ? "eye" : "eye-closed"}
+          size={32}
+          color="#000"
+        />
+      </View>
+      {visibleIds.includes(item.id) && (
+        <View style={[styles.passwordDisplay, { backgroundColor: item.color }]}>
+          <Text style={styles.passwordHint}>{item.passwordHint}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+
+  const renderHiddenItem = (data, rowMap) => (
+    <View style={styles.hiddenRow} key={data.item.id}>
+      <TouchableOpacity
+        style={[styles.hiddenButton, styles.deleteButton]}
+        onPress={() => deleteItem(data.item)}
+      >
+        <Icon name="delete" size={48} color="#fff" />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.hiddenButton, styles.editButton]}
+        onPress={() => {
+          setMode(Mode.EDIT);
+          editItem(data.item);
+        }}
+      >
+        <Icon name="edit" size={48} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
 
   useEffect(() => {
     if (isModalVisible && titleInputRef.current) {
@@ -151,82 +275,45 @@ const HomePage = () => {
           <Text style={styles.sectionTitle}>Saved hints 👇🏾</Text>
         </View>
       </View>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.savedPasswordsSection}>
-          {filteredList.map((item) => {
-            const dynamicStyles = StyleSheet.create({
-              passwordDisplay: {
-                backgroundColor: item.color,
-                padding: 12,
-                borderBottomLeftRadius: 10,
-                borderBottomRightRadius: 10,
-                alignItems: "center",
-                width: "100%",
-              },
-            });
-
-            return (
-              <View
-                key={item.title + item.description}
-                style={styles.passwordItem}
-              >
-                <View style={styles.passwordRow}>
-                  <Icon
-                    name={item.icon}
-                    size={32}
-                    color={item.color}
-                    style={styles.appIcon}
-                  />
-                  <View style={styles.passwordDetails}>
-                    <Text style={styles.passwordTitle}>{item.title}</Text>
-                    <Text style={styles.passwordEmail}>{item.description}</Text>
-                  </View>
-                  {visibleIds.includes(item.id) && (
-                    <View>
-                      <TouchableOpacity onPress={() => onClickPreview(item)}>
-                        <Icon name="delete" size={24} color="#000" />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => onClickPreview(item)}>
-                        <Icon name="edit" size={24} color="#000" />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  <TouchableOpacity onPress={() => onClickPreview(item)}>
-                    <Octicon
-                      name={visibleIds.includes(item.id) ? "eye" : "eye-closed"}
-                      size={32}
-                      color="#000"
-                    />
-                  </TouchableOpacity>
-                </View>
-                {visibleIds.includes(item.id) && (
-                  <View style={dynamicStyles.passwordDisplay}>
-                    <Text style={styles.passwordHint}>{item.passwordHint}</Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
+      <View style={styles.savedPasswordsSection}>
+        <SwipeListView
+          data={filteredList}
+          renderItem={renderItem}
+          renderHiddenItem={renderHiddenItem}
+          rightOpenValue={-150}
+          disableRightSwipe
+          keyExtractor={(item) => item.id}
+        />
+      </View>
 
       <TouchableOpacity
         style={styles.floatingButton}
-        onPress={() => setModalVisible(true)}
+        onPress={() => {
+          setMode(Mode.ADD);
+          setModalVisible(true);
+        }}
       >
         <Icon name="add" size={32} color="#fff" />
       </TouchableOpacity>
 
       <Modal
         isVisible={isModalVisible}
-        onSwipeComplete={() => setModalVisible(false)}
+        onSwipeComplete={() => {
+          clearFields();
+          setModalVisible(false);
+        }}
         swipeDirection={["down"]}
         style={styles.modal}
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalHeaderText}>Add New Password</Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
+            <TouchableOpacity
+              onPress={() => {
+                clearFields();
+                setModalVisible(false);
+              }}
+            >
               <Icon name="close" size={24} color="#000" />
             </TouchableOpacity>
           </View>
@@ -268,16 +355,20 @@ const HomePage = () => {
                 onChangeText={setPasswordHint}
                 returnKeyType="done"
                 onSubmitEditing={() => {
-                  storeData();
+                  onClickAddEditItem();
                   setModalVisible(false);
                 }}
               />
             </View>
           </View>
           <TouchableOpacity
-            style={styles.saveButton}
+            disabled={!title || !description || !passwordHint}
+            style={[
+              styles.saveButton,
+              { opacity: !title || !description || !passwordHint ? 0.4 : 1 },
+            ]}
             onPress={() => {
-              storeData();
+              onClickAddEditItem();
               setModalVisible(false);
             }}
           >
@@ -345,6 +436,7 @@ const styles = StyleSheet.create({
     right: 20,
   },
   savedPasswordsSection: {
+    flex: 1,
     padding: 20,
   },
   sectionHeader: {
@@ -511,9 +603,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
   },
-  scrollView: {
-    flex: 1,
-  },
   iconWrapper: {
     position: "relative",
     width: 48,
@@ -526,6 +615,31 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.3)",
     borderRadius: 10,
     padding: 2,
+  },
+  hiddenRow: {
+    alignItems: "center",
+    backgroundColor: "#DDD",
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingLeft: 15,
+    height: 10,
+    marginBottom: 10,
+    borderRadius: 10,
+  },
+  hiddenButton: {
+    width: 75,
+    height: "95%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editButton: {
+    backgroundColor: "#1E90FFcc",
+    borderBottomRightRadius: 10,
+    borderTopRightRadius: 10,
+  },
+  deleteButton: {
+    backgroundColor: "#FF0000bb",
   },
 });
 
