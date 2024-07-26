@@ -276,14 +276,20 @@ const HomePage = () => {
         </View>
       </View>
       <View style={styles.savedPasswordsSection}>
-        <SwipeListView
-          data={filteredList}
-          renderItem={renderItem}
-          renderHiddenItem={renderHiddenItem}
-          rightOpenValue={-150}
-          disableRightSwipe
-          keyExtractor={(item) => item.id}
-        />
+        {secureData?.length > 0 ? (
+          <SwipeListView
+            data={filteredList}
+            renderItem={renderItem}
+            renderHiddenItem={renderHiddenItem}
+            rightOpenValue={-150}
+            disableRightSwipe
+            keyExtractor={(item) => item.id}
+          />
+        ) : (
+          <Text style={styles.instructionSubtitle}>
+            Add password hints so that they show up here
+          </Text>
+        )}
       </View>
 
       <TouchableOpacity
@@ -307,7 +313,7 @@ const HomePage = () => {
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalHeaderText}>Add New Password</Text>
+            <Text style={styles.modalHeaderText}>Add new hint</Text>
             <TouchableOpacity
               onPress={() => {
                 clearFields();
@@ -428,6 +434,11 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 14,
+    color: "#666",
+  },
+  instructionSubtitle: {
+    fontSize: 14,
+    textAlign: "center",
     color: "#666",
   },
   chartIcon: {
