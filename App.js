@@ -58,9 +58,11 @@ const HomePage = () => {
     const retrieveData = async () => {
       try {
         let jsonValue = await SecureStore.getItemAsync("secure_data");
-        jsonValue =
-          jsonValue !== undefined || null ? JSON.parse(jsonValue) : [];
-        setSecureData(jsonValue);
+        if (jsonValue !== null) {
+          setSecureData(JSON.parse(jsonValue));
+        } else {
+          setSecureData([]);
+        }
       } catch (error) {
         console.error("Error retrieving data:", error);
       }
