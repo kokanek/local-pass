@@ -127,7 +127,7 @@ const HomePage = () => {
       setFilteredList(secureData);
       return;
     }
-    const newFilteredList = filteredList.filter(
+    const newFilteredList = secureData.filter(
       (item) =>
         item.title.toLowerCase().includes(str.toLowerCase()) ||
         item.description.toLowerCase().includes(str.toLowercase),
@@ -243,6 +243,7 @@ const HomePage = () => {
 
   useEffect(() => {
     if (isModalVisible && titleInputRef.current) {
+      // eslint-disable-next-line
       setTimeout(() => {
         titleInputRef.current.focus();
       }, 100);
