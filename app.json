@@ -21,9 +21,8 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.codesketched.localpass",
-      "targetSdkVersion": 33,
-      "compileSdkVersion": 33,
-      "minSdkVersion": 21
+      "targetSdkVersion": 35,
+      "compileSdkVersion": 35,
     },
     "web": {
       "favicon": "./assets/favicon.png"
