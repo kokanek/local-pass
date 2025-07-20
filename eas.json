@@ -15,7 +15,9 @@
     },
     "production": {
       "android": {
-        "image": "latest"
+        "image": "latest",
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
       },
       "ios": {
         "image": "latest"

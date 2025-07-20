@@ -2,7 +2,7 @@
   "expo": {
     "name": "local-pass",
     "slug": "local-pass",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,12 +15,15 @@
       "supportsTablet": true
     },
     "android": {
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.codesketched.localpass"
+      "package": "com.codesketched.localpass",
+      "targetSdkVersion": 33,
+      "compileSdkVersion": 33,
+      "minSdkVersion": 21
     },
     "web": {
       "favicon": "./assets/favicon.png"
