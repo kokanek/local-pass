@@ -193,6 +193,7 @@ export const globalStyles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     fontSize: 16,
+    color: "#333",
   },
   iconWrapper: {
     position: "relative",
