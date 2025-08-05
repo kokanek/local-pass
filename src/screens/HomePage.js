@@ -21,6 +21,7 @@ import PassList from "../components/PassList";
 import AddEditModal from "../components/AddEditModal";
 import IconPickerModal from "../components/IconPickerModal";
 import ImportExportModal from "../components/ImportExportModal";
+import PasswordModal from "../components/PasswordModal";
 
 const HomePage = () => {
   const titleInputRef = useRef(null);
@@ -29,6 +30,8 @@ const HomePage = () => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [isImportExportModalVisible, setImportExportModalVisible] =
     useState(false);
+  const [isPasswordModalVisible, setPasswordModalVisible] = useState(false);
+  const [passwordModalType, setPasswordModalType] = useState(""); // "export" or "import"
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [passwordHint, setPasswordHint] = useState("");
@@ -172,11 +175,21 @@ const HomePage = () => {
   };
 
   const handleImport = async () => {
-    await importData(secureData, setSecureData);
+    setPasswordModalType("import");
+    setPasswordModalVisible(true);
   };
 
   const handleExport = async () => {
-    await exportData(secureData);
+    setPasswordModalType("export");
+    setPasswordModalVisible(true);
+  };
+
+  const handlePasswordSubmit = async (password) => {
+    if (passwordModalType === "export") {
+      await exportData(secureData, password);
+    } else if (passwordModalType === "import") {
+      await importData(secureData, setSecureData, password);
+    }
   };
 
   useEffect(() => {
@@ -251,6 +264,23 @@ const HomePage = () => {
         setIsVisible={setImportExportModalVisible}
         onImport={handleImport}
         onExport={handleExport}
+      />
+
+      <PasswordModal
+        isVisible={isPasswordModalVisible}
+        setIsVisible={setPasswordModalVisible}
+        onSubmit={handlePasswordSubmit}
+        title={
+          passwordModalType === "export"
+            ? "Export Passwords"
+            : "Import Passwords"
+        }
+        message={
+          passwordModalType === "export"
+            ? "Create a password to encrypt your exported data. You'll need this password to import the data later."
+            : "Enter the password used when exporting this data."
+        }
+        confirmButtonText={passwordModalType === "export" ? "Export" : "Import"}
       />
     </SafeAreaView>
   );

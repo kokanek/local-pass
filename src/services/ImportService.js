@@ -3,8 +3,9 @@ import * as FileSystem from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
 import uuid from "react-native-uuid";
 import { storeData } from "./StorageService";
+import { decryptData } from "./CryptoService";
 
-export const importData = async (secureData, setSecureData) => {
+export const importData = async (secureData, setSecureData, password) => {
   try {
     console.log("Starting import process");
 
@@ -71,11 +72,47 @@ export const importData = async (secureData, setSecureData) => {
 
       let importedData;
       try {
-        importedData = JSON.parse(fileContent);
-        console.log("Parsed data items:", importedData?.length || 0);
+        const parsedContent = JSON.parse(fileContent);
+        console.log("Parsed file content");
+
+        // Check if this is an encrypted export (has version, encryptedData, salt)
+        if (
+          parsedContent.version &&
+          parsedContent.encryptedData &&
+          parsedContent.salt
+        ) {
+          console.log("Detected encrypted export, attempting decryption");
+
+          if (!password) {
+            Alert.alert(
+              "Import Error",
+              "This file is encrypted. Please provide the password used during export.",
+            );
+            return;
+          }
+
+          try {
+            importedData = await decryptData(parsedContent, password);
+            console.log(
+              "Successfully decrypted data items:",
+              importedData?.length || 0,
+            );
+          } catch (decryptError) {
+            console.error("Decryption error:", decryptError);
+            Alert.alert(
+              "Import Error",
+              "Failed to decrypt file. Please check your password.",
+            );
+            return;
+          }
+        } else {
+          // This is an unencrypted export (legacy format)
+          console.log("Detected unencrypted export");
+          importedData = parsedContent;
+        }
       } catch (parseError) {
         console.error("JSON parse error:", parseError);
-        Alert.alert("Import Error", "Invalid JSON format in the selected file");
+        Alert.alert("Import Error", "Invalid file format or corrupted data");
         return;
       }
 
